@@ -1,0 +1,36 @@
+function graph_split_data(filename)
+
+    % open file 
+    data = fopen(filename,"r");
+    
+    %initializing time and distance vectors for graphing
+    time = [];
+    distance = [];
+    
+    while ~feof(data) % will check till end of file is reached
+        line = fgetl(data); % reads one line of data at a time
+
+        if contains(line, "---") % checks for dashed line and plots previous set of data
+            if ~isempty(time) && ~isempty(distance) 
+                figure;
+                plot(time, distance, "LineWidth", 1.5);
+                xlabel("Time");
+                ylabel("Distance");
+                title("Time vs Distance (split data)");
+                grid on;
+                drawnow;
+            end
+            % reset time and distance vectors 
+            time = [];
+            distance = [];
+            continue;
+        end
+        line = strrep(line, ","," "); % replace commas with spaces
+        numeric = str2num(line); % convert from string to numeric values
+        if length(numeric) == 2
+            time = [time; numeric(1)]; % appending first element of numeric to time vector
+            distance = [distance; numeric(2)]; % appending second element of numeric to time vector
+        end
+    end
+    fclose(data); % close file
+end
