@@ -1,31 +1,32 @@
-**Data Splitting**
-Take our sensor data as input, and output a cut-down set of data that contains each detected object 'dip' separated by delimiters.
+# Code Specifications
+## Data Splitting
+**Code Description**: Brief overview of what code will do
+**Objective**: Brief overview of the code's purpose in the context of the project
 
-A 'dip' object:
+Input:
 
----(delimiter)
-Time,distance <
-Time,distance < 
-Time,distance <  The detected time and distance values corresponding to the object
-Time,distance < 
----(delimiter)
+Output:
 
+## Graphing Data
+**Code Description**: Brief overview of what code will do
+**Objective**: Brief overview of the code's purpose in the context of the project
 
-Input: .txt file, in format:
-Time,distance
-Time,distance
-Time,distance
-Time,distance
+Input: 
 
+Output: 
 
-Output: .txt file, in format:
-Each 
+## Classification Algorithm
+**Code Description**: Brief overview of what code will do
+**Objective**: Brief overview of the code's purpose in the context of the project
 
-Time,distance
-Time,distance
-Time,distance
----
-Time,distance
-Time,distance
----
+Input:
 
+Output:
+
+## Real Time Data Splitting
+**Code Description**: Brief overview of what code will do
+**Objective**: Brief overview of the code's purpose in the context of the project
+
+Input:
+
+Output:
