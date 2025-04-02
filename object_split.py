@@ -19,6 +19,7 @@ class ObjectSplit():
         self.file_output = file_output
 
     def ds(self):
+        open(self.file_output, "w").close()
         with open(self.file_input, 'r') as file:
             content = csv.reader(file)
             prev_distance1 = 0
@@ -58,8 +59,8 @@ class ObjectSplit():
                         file2.write(f"{curr_time},{curr_distance}\n")
                         high = False
                         end_count = 0
-                elif curr_distance > 190 and not high:
-                    end_count += 1
+                elif curr_distance < 190 and not high:
+                    end_count = 0
                     with open(self.file_output, "a") as file2:
                         file2.write(f"{curr_time},{curr_distance}\n")
                 elif end_count == 3:
@@ -67,8 +68,12 @@ class ObjectSplit():
                         file2.write("---\n")
                         high = True
                         end_count = 0
+                elif curr_distance > 190 and not high:
+                    end_count += 1
+                    with open(self.file_output, "a") as file2:
+                        file2.write(f"{curr_time},{curr_distance}\n")
 
 if __name__ == "__main__":
-    test = ObjectSplit("RAK_DATA.TXT", "output.txt")
+    test = ObjectSplit("test_input.txt", "test_output.txt")
     test.ds()
     
