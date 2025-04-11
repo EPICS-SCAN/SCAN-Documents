@@ -1,0 +1,65 @@
+function graph_split_data_pdf(filename)
+% Open file
+data = fopen(filename, "r");
+
+% Initializing time and distance vectors for graphing
+time = [];
+distance = [];
+
+% Output PDF file name
+outputPDF = "graph_split_output.pdf";
+
+% Delete the file if it exists (to avoid appending to old data)
+if exist(outputPDF, 'file')
+    delete(outputPDF);
+end
+
+while ~feof(data) % Check until end of file
+    line = fgetl(data); % Read one line at a time
+
+    if contains(line, "---") % Section delimiter
+        if ~isempty(time) && ~isempty(distance)
+            % Create and plot new figure
+            fig = figure('Visible', 'off'); % Hide figure while generating
+            plot(time, distance, 'LineWidth', 1.5);
+            xlabel('Time');
+            ylabel('Distance');
+            title('Time vs Distance (split data)');
+            grid on;
+
+            % Export to PDF (append if not the first plot)
+            exportgraphics(fig, outputPDF, 'Append', true);
+
+            % Close the figure to save memory
+            close(fig);
+        end
+        % Reset data for the next chunk
+        time = [];
+        distance = [];
+        continue;
+    end
+
+    % Process line
+    line = strrep(line, ",", " "); % Replace commas with spaces
+    numeric = str2num(line); % Convert string to numeric
+    if length(numeric) == 2
+        time = [time; numeric(1)];
+        distance = [distance; numeric(2)];
+    end
+end
+
+% Handle the last chunk of data (if file doesn't end with "---")
+if ~isempty(time) && ~isempty(distance)
+    fig = figure('Visible', 'off');
+    plot(time, distance, 'LineWidth', 1.5);
+    xlabel('Time');
+    ylabel('Distance');
+    title('Time vs Distance (split data)');
+    grid on;
+    exportgraphics(fig, outputPDF, 'Append', true);
+    close(fig);
+end
+
+% Close the file
+fclose(data);
+end
