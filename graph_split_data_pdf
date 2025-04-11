@@ -1,65 +1,86 @@
 function graph_split_data_pdf(filename)
-% Open file
+
 data = fopen(filename, "r");
 
-% Initializing time and distance vectors for graphing
+% Initialize empty arrays to store current dataset's time and distance values
 time = [];
 distance = [];
 
-% Output PDF file name
+% Name of the output PDF file
 outputPDF = "graph_split_output.pdf";
 
-% Delete the file if it exists (to avoid appending to old data)
+% Check if the output PDF already exists. If it does, delete it to start fresh.
+% This prevents appending to an old file from a previous run.
 if exist(outputPDF, 'file')
-    delete(outputPDF);
+delete(outputPDF);
 end
 
-while ~feof(data) % Check until end of file
-    line = fgetl(data); % Read one line at a time
+% Loop through each line of the file until the end is reached
+while ~feof(data)
+% Read the current line as a string
+line = fgetl(data);
 
-    if contains(line, "---") % Section delimiter
-        if ~isempty(time) && ~isempty(distance)
-            % Create and plot new figure
-            fig = figure('Visible', 'off'); % Hide figure while generating
-            plot(time, distance, 'LineWidth', 1.5);
-            xlabel('Time');
-            ylabel('Distance');
-            title('Time vs Distance (split data)');
-            grid on;
+% Check if the line is a delimiter (indicating the end of one dataset)
+if contains(line, "---")
+    % If time and distance arrays have data, plot and save them
+    if ~isempty(time) && ~isempty(distance)
+        % Create a new figure (invisible to avoid popping up while running)
+        fig = figure('Visible', 'off');
 
-            % Export to PDF (append if not the first plot)
-            exportgraphics(fig, outputPDF, 'Append', true);
+        % Plot the data: time on X-axis, distance on Y-axis
+        plot(time, distance, 'LineWidth', 1.5);
+        xlabel('Time'); % X-axis label
+        ylabel('Distance'); % Y-axis label
+        title('Time vs Distance (split data)'); % Title of the plot
+        grid on; % Add a grid to the plot
 
-            % Close the figure to save memory
-            close(fig);
-        end
-        % Reset data for the next chunk
-        time = [];
-        distance = [];
-        continue;
+        % Export this figure to a PDF file, appending it as a new page
+        exportgraphics(fig, outputPDF, 'Append', true);
+
+        % Close the figure to free up system memory
+        close(fig);
     end
 
-    % Process line
-    line = strrep(line, ",", " "); % Replace commas with spaces
-    numeric = str2num(line); % Convert string to numeric
-    if length(numeric) == 2
-        time = [time; numeric(1)];
-        distance = [distance; numeric(2)];
-    end
+    % Reset time and distance arrays to prepare for the next dataset
+    time = [];
+    distance = [];
+
+    % Skip to the next line without further processing
+    continue;
 end
 
-% Handle the last chunk of data (if file doesn't end with "---")
+% Replace commas with spaces in the line, so we can parse numbers easily
+line = strrep(line, ",", " ");
+
+% Convert the line (string) into a numeric array
+% Expected format: two numbers per line (time and distance)
+numeric = str2num(line); %#ok<ST2NM> - acceptable for small-scale parsing
+
+% If two numeric values are found, store them in the arrays
+if length(numeric) == 2
+    time = [time; numeric(1)];       % Append first number to time array
+    distance = [distance; numeric(2)]; % Append second number to distance array
+end
+end
+
+% After the loop: check if there's any remaining data to plot
+% This is important if the file doesn't end with a '---' line
 if ~isempty(time) && ~isempty(distance)
-    fig = figure('Visible', 'off');
-    plot(time, distance, 'LineWidth', 1.5);
-    xlabel('Time');
-    ylabel('Distance');
-    title('Time vs Distance (split data)');
-    grid on;
-    exportgraphics(fig, outputPDF, 'Append', true);
-    close(fig);
+% Create and plot the final figure
+fig = figure('Visible', 'off');
+plot(time, distance, 'LineWidth', 1.5);
+xlabel('Time');
+ylabel('Distance');
+title('Time vs Distance (split data)');
+grid on;
+
+% Append this last figure to the PDF
+exportgraphics(fig, outputPDF, 'Append', true);
+
+% Close the figure
+close(fig);
 end
 
-% Close the file
+% Close the input file
 fclose(data);
 end
