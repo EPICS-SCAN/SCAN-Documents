@@ -1,0 +1,52 @@
+bool isCarShape(float data[][2], int dataSize) {
+  float concavities[dataSize];
+
+  // find concavity
+  for (int i = 0; i < dataSize; i++) {
+    if (i <= 0 || i >= dataSize - 1) {
+      concavities[i] = 0.0;  // Handle edge points
+    } else {
+      float t1 = data[i - 1][0];  // time at i-1
+      float t2 = data[i][0];      // time at i
+      float t3 = data[i + 1][0];  // time at i+1
+
+      float d1 = data[i - 1][1];  // distance at i-1
+      float d2 = data[i][1];      // distance at i
+      float d3 = data[i + 1][1];  // distance at i+1
+
+      float h1 = t2 - t1;
+      float h2 = t3 - t2;
+      float avgH = (h1 + h2) / 2.0;
+
+      concavities[i] = (d3 - 2 * d2 + d1) / (avgH * avgH);
+    }
+  }
+
+  // Detect pattern: 
+  bool Positive = false;
+  bool Negative = false;
+  bool Positiveagain = false;
+
+  for (int i = 0; i < dataSize; i++) {
+    float c = concavities[i];
+
+    if (c > 0 && !Positive) {
+      foundPositive = true;
+    }
+    else if (Positive && c < 0 && !Negative) {
+      Negative = true;
+    }
+    else if (Positive && Negative && c > 0) {
+      Positiveagain = true;
+      break;
+    }
+  }
+
+  if (Positive && Negative && Positiveagain) {
+    Serial.println("Car");
+    return true;
+  } else {
+    Serial.println("Not a car");
+    return false;
+  }
+}
