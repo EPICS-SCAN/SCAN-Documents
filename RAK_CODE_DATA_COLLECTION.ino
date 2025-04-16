@@ -21,7 +21,7 @@ int array_index = 0;
 long duration; //Time between ultrasound trasmit and receive
 int distance; //Distance from sensor to object
 int distances[10];
-char data_string[DATA_STRING_LENGTH];
+char data_string[DATA_STRING_LENGTH] = "";
 char data_array[DATA_ARRAY_SIZE][DATA_STRING_LENGTH];
 
 void setup() {
@@ -52,7 +52,7 @@ void loop() {
   digitalWrite(trigPin, LOW);
   //Measure microseconds between pulse trasmission and reception
   duration = pulseIn(echoPin, HIGH);
-
+ 
   if(duration >= 29154){
     distance = UNDEFINED_DISTANCE;
   }
@@ -87,45 +87,41 @@ void loop() {
     counter++;
   }
 
-  if(distance == 1000 && counter != 0)
+  // If distance turns out undefined, set distance value to last valid distance
+  if(distance == UNDEFINED_DISTANCE && counter != 0)
   {
     distance = distances[counter - 1];
   }
-  else if(distance == 1000)
+  else if(distance == UNDEFINED_DISTANCE)
   {
     distance = distances[9];
   }
   else{
     distance = distance;
   }
-  
+  /*
   Serial.print(300);
   Serial.print(',');
   Serial.print(distance);
   Serial.print(',');
   Serial.print(0);
   Serial.print('\n');
-  
+  */
 
-  //sprintf(data_string, "%d,%ld\n", distance, millis());
-  //Serial.println(data_string);
+  // Write data to SD card when array fills up; Format is time, distance
   if(array_index < DATA_ARRAY_SIZE - 1)
   {
-    sprintf(data_array[array_index], "%d,%ld\n", distance, millis());
+    sprintf(data_array[array_index], "%ld,%d\n", millis(), distance);
     array_index++;
   }
   else
   {
-    sprintf(data_array[array_index], "%d,%ld\n", distance, millis());
+    sprintf(data_array[array_index], "%ld,%d\n", millis(), distance);
     writeFileArray(FILE_NAME, data_array);
     array_index = 0;
   }
   
-  //writeFile(FILE_NAME, data_string);
 
- 
-  //Wait some milliseconds before next cycle
-  
 }
 
 /*
