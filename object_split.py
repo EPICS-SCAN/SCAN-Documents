@@ -74,6 +74,6 @@ class ObjectSplit():
                         file2.write(f"{curr_time},{curr_distance}\n")
 
 if __name__ == "__main__":
-    test = ObjectSplit("test_input.txt", "test_output.txt")
+    test = ObjectSplit("RAK_DATA.TXT", "RAK_DATA_SPLIT.txt")
     test.ds()
     
