@@ -14,8 +14,8 @@ function graph_split_data(filename)
             if ~isempty(time) && ~isempty(distance) 
                 figure;
                 plot(time, distance, "LineWidth", 1.5);
-                xlabel("Time");
-                ylabel("Distance");
+                xlabel("Time (ms)");
+                ylabel("Distance (cm)");
                 title("Time vs Distance (split data)");
                 grid on;
                 drawnow;
