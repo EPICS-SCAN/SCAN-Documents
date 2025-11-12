@@ -1,0 +1,163 @@
+#include <Arduino.h>
+#include "LoRaWan-Arduino.h"
+#include <SPI.h>
+
+// LoRaWAN send interval (ms)
+#define LORAWAN_APP_INTERVAL 5000  // 30 seconds
+#define LORAWAN_APP_DATA_BUFF_SIZE 64
+#define JOINREQ_NBTRIALS 8
+
+bool doOTAA = true;
+int availableSpots = 996; // Example sensor reading
+
+// ---------- Device Credentials (fill from ChirpStack) ----------
+uint8_t nodeDeviceEUI[8] = {0xAC, 0x1F, 0x09, 0xFF, 0xFE, 0x05, 0x10, 0x95};
+uint8_t nodeAppEUI[8]    = {0xAC, 0x1F, 0x09, 0xFF, 0xFE, 0x05, 0x10, 0x95};
+uint8_t nodeAppKey[16]   = {0x89, 0x4C, 0xD5, 0xB2, 0x3D, 0x7A, 0x1D, 0xF1,
+                            0x6B, 0x4F, 0xED, 0x2F, 0x10, 0x3F, 0xDF, 0xE5};
+
+// ---------- Region and LoRa Config ----------
+DeviceClass_t g_CurrentClass = CLASS_A;
+LoRaMacRegion_t g_CurrentRegion = LORAMAC_REGION_US915; // Change for your location
+lmh_confirm g_CurrentConfirm = LMH_UNCONFIRMED_MSG;
+uint8_t gAppPort = 2; // Application port
+
+// ---------- Parameters ----------
+static lmh_param_t g_lora_param_init = {
+  LORAWAN_ADR_ON,
+  LORAWAN_DEFAULT_DATARATE,
+  LORAWAN_PUBLIC_NETWORK,
+  JOINREQ_NBTRIALS,
+  LORAWAN_DEFAULT_TX_POWER,
+  LORAWAN_DUTYCYCLE_OFF
+};
+
+// ---------- Callback Declarations ----------
+void lorawan_has_joined_handler(void);
+void lorawan_join_failed_handler(void);
+void lorawan_rx_handler(lmh_app_data_t *app_data);
+void lorawan_confirm_class_handler(DeviceClass_t Class);
+void send_lora_frame(void);
+void tx_lora_periodic_handler(void);
+
+// ---------- Callback Struct ----------
+static lmh_callback_t g_lora_callbacks = {
+  BoardGetBatteryLevel,
+  BoardGetUniqueId,
+  BoardGetRandomSeed,
+  lorawan_rx_handler,
+  lorawan_has_joined_handler,
+  lorawan_confirm_class_handler,
+  lorawan_join_failed_handler
+};
+
+// ---------- Buffers ----------
+static uint8_t m_lora_app_data_buffer[LORAWAN_APP_DATA_BUFF_SIZE];
+static lmh_app_data_t m_lora_app_data = { m_lora_app_data_buffer, 0, 0, 0, 0 };
+
+mbed::Ticker appTimer;
+bool send_now = false;
+
+// ================================================================
+//                           SETUP
+// ================================================================
+void setup() {
+  // Initialize Serial
+  Serial.begin(115200);
+  unsigned long timeout = millis();
+  while (!Serial && (millis() - timeout < 5000)) delay(100);
+  Serial.println("=====================================");
+  Serial.println("RAK11300 LoRaWAN Parking Sensor Demo");
+  Serial.println("=====================================");
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+
+  // Initialize LoRa hardware
+  if (lora_rak11300_init() != 0) {
+    Serial.println("❌ LoRa init failed!");
+    while (1);
+  }
+
+  // Set OTAA credentials
+  lmh_setDevEui(nodeDeviceEUI);
+  lmh_setAppEui(nodeAppEUI);
+  lmh_setAppKey(nodeAppKey);
+
+  // Initialize LoRaWAN stack
+  uint32_t err_code = lmh_init(&g_lora_callbacks, g_lora_param_init,
+                               doOTAA, g_CurrentClass, g_CurrentRegion);
+  if (err_code != 0) {
+    Serial.printf("lmh_init failed - %d\n", err_code);
+    while (1);
+  }
+
+  // Select correct sub-band (for US915: 0–7)
+  // Match this to your gateway’s sub-band (for LPS8 default is 2)
+  if (!lmh_setSubBandChannels(6)) {
+    Serial.println("⚠️ Sub-band setup failed. Check gateway configuration!");
+  }
+
+  // Start OTAA Join
+  Serial.println("🚀 Joining LoRaWAN network...");
+  lmh_join();
+}
+
+// ================================================================
+//                           LOOP
+// ================================================================
+void loop() {
+  if (send_now) {
+    send_now = false;
+    send_lora_frame();
+  }
+}
+
+// ================================================================
+//                     CALLBACK FUNCTIONS
+// ================================================================
+void lorawan_has_joined_handler(void) {
+  Serial.println("✅ LoRaWAN joined successfully!");
+  appTimer.attach(tx_lora_periodic_handler, std::chrono::milliseconds(LORAWAN_APP_INTERVAL));
+}
+
+void lorawan_join_failed_handler(void) {
+  Serial.println("❌ Join failed. Check EUIs, Keys, and Gateway coverage.");
+}
+
+void lorawan_rx_handler(lmh_app_data_t *app_data) {
+  Serial.printf("📩 Received downlink on port %d, size: %d bytes\n",
+                app_data->port, app_data->buffsize);
+}
+
+void lorawan_confirm_class_handler(DeviceClass_t Class) {
+  Serial.printf("Switched to Class %c\n", "ABC"[Class]);
+}
+
+void tx_lora_periodic_handler(void) {
+  send_now = true;
+}
+
+// ================================================================
+//                        SEND UPLINK
+// ================================================================
+void send_lora_frame(void) {
+  if (lmh_join_status_get() != LMH_SET) {
+    Serial.println("⚠️ Not joined yet, skipping send");
+    return;
+  }
+  availableSpots++;
+  char msg[5];
+  sprintf(msg, "%04d", availableSpots); // Convert to 4-digit string (e.g. "0037")
+
+  memcpy(m_lora_app_data.buffer, msg, 4);
+  m_lora_app_data.buffsize = 4;
+  m_lora_app_data.port = gAppPort;
+
+  lmh_error_status result = lmh_send(&m_lora_app_data, g_CurrentConfirm);
+  if (result == LMH_SUCCESS) {
+    Serial.printf("📤 Sent parking count: %s\n", msg);
+  } else {
+    Serial.printf("❌ Send failed with code %d\n", result);
+  }
+}
