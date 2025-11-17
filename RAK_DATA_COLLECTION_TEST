@@ -1,7 +1,7 @@
 //Make sure to install the SD library in Arduino IDE's library manager
 
 #include "SPI.h"
-#include "SD.h"//http://librarymanager/All#SD
+//#include "SD.h"//http://librarymanager/All#SD
 
 //THE PROGRAM WILL PRINT THE DETECTED OBJECT DISTANCE IN CM TO THE SERIAL PORT
 const byte trigPin = WB_IO1; //Pin numberof sensor trigger pin (transmit)
@@ -38,14 +38,8 @@ void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   distances[0] = 0;
+  Serial.println("START");
 
-  if (!SD.begin()) { // Adjust WB_IO3 to match your SD module CS pin
-    Serial.println("SD Card initialization failed!");
-    return;
-  }
-  Serial.println("SD Card initialized successfully.");
-
-  deleteFile(FILE_NAME);
 }
 
 void loop() {
@@ -106,15 +100,15 @@ void loop() {
   else{
     distance = distance;
   }
-  if (state == idle && distance < 50){
+  if (state == idle && distance < 20){
     state = low;
   }
-  else if(state == low && distance > 100){
+  else if(state == low && distance > 200){
     state = send;
   }
   else if(state == send){
-    car_count ++;
+    car_count++;
     state = idle;
-    Serial.println(car_count)
+    Serial.println(car_count);
   }
 }
